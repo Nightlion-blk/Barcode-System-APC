@@ -19,14 +19,14 @@ model audit_logs {
 }
 
 model barcoded_items {
-  barc_id      Int          @id @default(autoincrement())
-  barcode_sku  String       @unique @db.VarChar(100)
-  prod_name    String       @db.VarChar(255)
-  last_updated DateTime?    @default(now()) @db.Timestamp(6)
-  quantity     Int?         @default(0)
-  status       String?      @db.VarChar(50)
-  history      history[]
-  print_item   print_item[]
+  barc_id       Int             @id @default(autoincrement())
+  barcode_sku   String          @unique @db.VarChar(100)
+  prod_name     String          @db.VarChar(255)
+  last_updated  DateTime?       @default(now()) @db.Timestamp(6)
+  quantity      Int?            @default(0)
+  status        String?         @db.VarChar(50)
+  history       history[]
+  request_items request_items[]
 }
 
 model history {
@@ -40,31 +40,22 @@ model history {
 }
 
 model permission_tbl {
-  permission_id   Int       @id @default(autoincrement())
-  permission_name String?   @db.VarChar(255)
-  description     String?
-  created_at      DateTime? @default(now()) @db.Timestamptz(6)
-  roles           roles[]
-}
-
-model print_item {
-  notif_id       Int             @id @default(autoincrement())
-  user_id        Int?
-  barc_id        Int?
-  quantity       Int?            @default(0)
-  created_at     DateTime?       @default(now()) @db.Timestamp(6)
-  completed_at   DateTime?       @db.Timestamp(6)
-  barcoded_items barcoded_items? @relation(fields: [barc_id], references: [barc_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_print_item_barcid")
-  users          users?          @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_print_item_user")
+  permission_id    Int                @id @default(autoincrement())
+  permission_name  String?            @db.VarChar(255)
+  description      String?
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+  roles            roles[]
 }
 
 model roles {
-  role_id        Int             @id @default(autoincrement())
-  role_name      String          @db.VarChar(255)
-  status         role_status?    @default(active)
-  permission_id  Int?
-  permission_tbl permission_tbl? @relation(fields: [permission_id], references: [permission_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_permission_role")
-  users          users[]
+  role_id          Int                @id @default(autoincrement())
+  role_name        String             @db.VarChar(255)
+  status           role_status?       @default(active)
+  permission_id    Int?
+  role_permissions role_permissions[]
+  permission_tbl   permission_tbl?    @relation(fields: [permission_id], references: [permission_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_permission_role")
+  users            users[]
 }
 
 model users {
@@ -79,8 +70,55 @@ model users {
   role_id       Int?
   audit_logs    audit_logs[]
   history       history[]
-  print_item    print_item[]
+  request       request[]
   roles         roles?       @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_role_users")
+}
+
+model customer {
+  customer_id   Int             @id @default(autoincrement())
+  customer_name String          @db.VarChar(255)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  completed_at  DateTime?       @db.Timestamp(6)
+  status        customer_status @default(active)
+  request       request[]
+}
+
+model request {
+  req_id        Int             @id @default(autoincrement())
+  user_id       Int
+  customer_id   Int
+  message       String?
+  status        request_status  @default(pending)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  customer      customer        @relation(fields: [customer_id], references: [customer_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_request_customer")
+  users         users           @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_request_user")
+  request_items request_items[]
+
+  @@index([customer_id], map: "idx_request_customer_id")
+  @@index([user_id], map: "idx_request_user_id")
+}
+
+model request_items {
+  req_item_id    Int             @id @default(autoincrement())
+  barc_id        Int?
+  quantity       Int?            @default(0)
+  created_at     DateTime?       @default(now()) @db.Timestamp(6)
+  completed_at   DateTime?       @db.Timestamp(6)
+  req_id         Int?
+  barcoded_items barcoded_items? @relation(fields: [barc_id], references: [barc_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_request_items_barcid")
+  request        request?        @relation(fields: [req_id], references: [req_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_request_items_req")
+
+  @@index([barc_id], map: "idx_request_items_barc_id")
+  @@index([req_id], map: "idx_request_items_req_id")
+}
+
+model role_permissions {
+  role_id        Int
+  permission_id  Int
+  permission_tbl permission_tbl @relation(fields: [permission_id], references: [permission_id], onDelete: Cascade, onUpdate: NoAction)
+  roles          roles          @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
 }
 
 enum event_status {
@@ -102,6 +140,8 @@ enum item_status {
   in_stock
   low_stock
   out_of_stock
+  discontinued
+  inactive
 }
 
 enum role_status {
@@ -121,4 +161,16 @@ enum user_status {
   inactive
   pending
   deleted
+}
+
+enum customer_status {
+  active
+  inactive
+}
+
+enum request_status {
+  pending
+  in_progress
+  completed
+  cancelled
 }
