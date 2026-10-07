@@ -1,0 +1,1 @@
+export type ItemType = "low_stock" | "out_of_stock" | "in_stock" | "discontinued";
