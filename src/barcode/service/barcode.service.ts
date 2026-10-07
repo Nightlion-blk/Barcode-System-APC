@@ -1,10 +1,11 @@
 // barcoded-items.service.ts
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateBarcodedItemDto } from './barcode.dto/barcode.dto.js';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { CreateBarcodedItemDto } from '../barcode.dto/barcode.dto.js';
 import { BarcodeGeneratorService } from './barcode-generator.service.js';
 import { QrGeneratorService } from './qrcode-generator.service.js';
-import { CodeGenerator, CodeType } from './Interface/item.interfact.js';
+import { CodeGenerator, CodeType, LabelItem } from '../Interface/item.interfact.js';
+import { BarcodePdfService } from './barcodePdf.service.js';
 
 @Injectable()
 export class BarcodedItemsService {
@@ -14,6 +15,7 @@ export class BarcodedItemsService {
     private readonly prisma: PrismaService,
     barcode: BarcodeGeneratorService,
     qr: QrGeneratorService,
+    private readonly printPDF: BarcodePdfService
   ) {
     this.generators = { ean13: barcode, qrcode: qr };
   }
@@ -65,22 +67,58 @@ export class BarcodedItemsService {
 
   // ---------- Image for an existing item ----------
 
-  async getImage(sku: string, type?: CodeType) {
-    const item = await this.getBySku(sku);
-    const gen = this.getGenerator(type ?? this.detectType(item.barcode_sku));
-    return gen.generateImage(item.barcode_sku);
+  async getImages(skus: string[], type?: CodeType) {
+    const results: { sku: string; imageBase64: string }[] = [];
+    for (const sku of skus) {
+      const item = await this.getBySku(sku);
+      const gen = this.getGenerator(type ?? this.detectType(item.barcode_sku));
+      const img = await gen.generateImage(item.barcode_sku);
+      results.push({ sku: item.barcode_sku, imageBase64: img.toString('base64') });
+    }
+    return results; // outside the loop
   }
-
   // ---------- Lookup and CRUD ----------
+
+  async printPdf(sku: string[], type?: CodeType): Promise<StreamableFile>{
+    const formattedItems: LabelItem[] = [];
+    for(const file of sku){
+      console.log(file)
+      const items = await this.getBySku(file)
+      console.log(items)
+
+      const gen = this.getGenerator(type ?? this.detectType(items.barcode_sku))
+      const imageBuffer = await gen.generateImage(items.barcode_sku)
+
+     formattedItems.push({
+        productName: items.prod_name,
+        sku: items.barcode_sku,
+        quantity: items.quantity,
+        barcodeImageBase64: `data:image/png;base64,${imageBuffer.toString('base64')}`
+      });
+    }
+   
+    console.log(formattedItems)
+
+    const templateData = {
+      items: formattedItems
+    };
+    console.log(`Template Data: `,templateData)
+      return await this.printPDF.generatePDF(templateData, {
+      title: `Print Batch SKUs`,
+      format: 'A4'
+    });
+  }
 
   getAll() {
     return this.prisma.barcoded_items.findMany();
   }
 
   async getBySku(sku: string) {
-    const item = await this.prisma.barcoded_items.findUnique({
-      where: { barcode_sku: sku.trim() },
-    });
+    
+      const item = await this.prisma.barcoded_items.findUnique({
+        where: { barcode_sku: sku.trim() },
+      });
+    
     if (!item) throw new NotFoundException('Item not found');
     return item;
   }

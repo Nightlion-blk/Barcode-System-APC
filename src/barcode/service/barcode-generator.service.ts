@@ -2,7 +2,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import bwipjs from 'bwip-js';
-import { CodeGenerator } from '../barcode/Interface/item.interfact.js';
+import { CodeGenerator } from '../../barcode/Interface/item.interfact.js';
 
 @Injectable()
 export class BarcodeGeneratorService implements CodeGenerator {
@@ -14,8 +14,9 @@ export class BarcodeGeneratorService implements CodeGenerator {
   }
 
   async generateImage(sku: string): Promise<Buffer> {
-    if (!/^\d{13}$/.test(sku)) {
-      throw new BadRequestException('EAN-13 text must be exactly 13 digits');
+    console.log(`Barcode: ${sku}`)
+    if (!/^\d{12,13}$/.test(sku)){
+      throw new BadRequestException('EAN-13 text must be exactly 12 or 13 digits');
     }
     return bwipjs.toBuffer({
       bcid: 'ean13',

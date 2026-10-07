@@ -2,7 +2,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import bwipjs from 'bwip-js';
-import { CodeGenerator } from '../barcode/Interface/item.interfact.js';
+import { CodeGenerator } from '../../barcode/Interface/item.interfact.js';
 
 @Injectable()
 export class QrGeneratorService implements CodeGenerator {

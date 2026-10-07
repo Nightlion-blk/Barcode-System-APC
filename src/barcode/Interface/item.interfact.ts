@@ -6,3 +6,10 @@ export interface CodeGenerator {
   createSku(): string;                        // makes a valid SKU for this format
   generateImage(sku: string): Promise<Buffer>; // draws the image
 }
+//For Pdf
+export interface LabelItem {
+  productName: string;
+  sku: string;
+  quantity: number | null;
+  barcodeImageBase64: string;
+}
