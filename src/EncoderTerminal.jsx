@@ -53,13 +53,13 @@ export default function EncoderTerminal() {
     }, [isModalOpen, activePrintSku]);
 
     const confirmPrint = () => {
-        {
     // NEW LOGIC: Clear from queue if it has a dispatchId
     if (activePrintItem && activePrintItem.dispatchId) {
         removeFromQueue(activePrintItem.dispatchId);
     }
-        setIsModalOpen(false);
-        showToast(`Successfully sent barcode label for ${activePrintSku} to thermal printer!`, 'success');
+    
+    setIsModalOpen(false);
+    showToast(`Successfully sent barcode label for ${activePrintItem.sku} to thermal printer!`, 'success');
     };
 
     return (

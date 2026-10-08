@@ -6,6 +6,7 @@ import { useInventory } from '../context/InventoryContext';
 export default function CoordinatorDashboard() {
     const navigate = useNavigate();
     const isAdmin = localStorage.getItem('activeRole') === 'admin';
+    const { dispatchToEncoder } = useInventory();
 
     // State Management
     const [inventory, setInventory] = useState([]); // <-- 2. Starts completely empty now!
@@ -173,6 +174,8 @@ export default function CoordinatorDashboard() {
 
     const dispatchBulkPrint = () => {
         if (printQueue.length === 0) return;
+
+        dispatchToEncoder(printQueue);
         const skus = printQueue.map(q => q.sku).join(', ');
         logAuditAction('coord_1 (Coordinator)', 'DISPATCH_BULK_PRINT', `Dispatched batch print for: ${skus}`);
         showToast(`Successfully dispatched ${printQueue.length} items to the Factory Floor!`, 'success');
