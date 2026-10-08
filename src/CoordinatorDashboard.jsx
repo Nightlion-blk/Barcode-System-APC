@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchInventory } from './services/api'; // <-- 1. Importing your new API service
+import { useInventory } from '../context/InventoryContext';
 
 export default function CoordinatorDashboard() {
     const navigate = useNavigate();

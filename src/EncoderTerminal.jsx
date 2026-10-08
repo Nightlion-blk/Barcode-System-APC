@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
+import { useInventory } from '../context/InventoryContext';
 
 export default function EncoderTerminal() {
     const navigate = useNavigate();
@@ -8,17 +9,12 @@ export default function EncoderTerminal() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [activePrintSku, setActivePrintSku] = useState(null);
+    const [activePrintItem, setActivePrintItem] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [toast, setToast] = useState(null);
     const barcodeRef = useRef(null);
 
-    const inventoryData = [
-        { sku: 'SKU-PAPER-A4', name: 'Premium A4 Bond Paper 70gsm', qty: 150, status: 'in_stock', lastUpdated: 'Today, 08:30 AM' },
-        { sku: 'SKU-PAPER-A3', name: 'Standard A3 Copier Paper', qty: 85, status: 'in_stock', lastUpdated: 'Yesterday, 04:15 PM' },
-        { sku: 'SKU-GLOSSY-01', name: 'High-Gloss Photo Paper 200gsm', qty: 5, status: 'low_stock', lastUpdated: 'Oct 4, 11:20 AM' },
-        { sku: 'SKU-CARD-WHT', name: 'White Cardstock 250gsm', qty: 0, status: 'out_of_stock', lastUpdated: 'Sept 28, 09:00 AM' }
-    ];
+    const { inventory, livePrintQueue, removeFromQueue } = useInventory();
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -57,6 +53,11 @@ export default function EncoderTerminal() {
     }, [isModalOpen, activePrintSku]);
 
     const confirmPrint = () => {
+        {
+    // NEW LOGIC: Clear from queue if it has a dispatchId
+    if (activePrintItem && activePrintItem.dispatchId) {
+        removeFromQueue(activePrintItem.dispatchId);
+    }
         setIsModalOpen(false);
         showToast(`Successfully sent barcode label for ${activePrintSku} to thermal printer!`, 'success');
     };
